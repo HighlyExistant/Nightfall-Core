@@ -1,0 +1,15 @@
+[package]
+name = "nightfall_core"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ash = { version = "0.37.2", features = ["linked", "debug"] }
+bytemuck = "1.14.3"
+lazy_static = "1.4.0"
+ash-window = "0.12.0"
+raw-window-handle = "0.5.2"
+smallvec = "1.13.1"
+thiserror = "1.0.58"
