@@ -10,8 +10,6 @@ impl DevicePointer {
         let offset = ptr1-ptr2;
         DevicePointer((self.0 as isize).checked_add(offset).unwrap() as u64)
     }
-}
-impl DevicePointer {
     pub fn from_raw(address: u64) -> Self {
         Self(address)
     }

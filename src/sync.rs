@@ -6,7 +6,7 @@ use ash::{prelude::VkResult, vk};
 use crate::error::VulkanError;
 
 use super::device::LogicalDevice;
-
+#[derive(Clone)]
 pub struct Fence {
     fence: vk::Fence,
     device: Arc<LogicalDevice>

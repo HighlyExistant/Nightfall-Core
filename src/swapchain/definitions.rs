@@ -1,4 +1,4 @@
-use ash::vk_bitflags_wrapped;
+use ash::{vk, vk_bitflags_wrapped};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 #[repr(transparent)]
@@ -12,6 +12,11 @@ impl Format {
     #[inline]
     pub const fn as_raw(self) -> i32 {
         self.0
+    }
+}
+impl Into<vk::Format> for Format {
+    fn into(self) -> vk::Format {
+        vk::Format::from_raw(self.0)
     }
 }
 impl Format {

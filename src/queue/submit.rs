@@ -3,7 +3,7 @@ use std::sync::Arc;
 use ash::vk;
 use smallvec::SmallVec;
 
-use crate::sync::Semaphore;
+use crate::{image::PipelineStageFlags, sync::Semaphore};
 
 pub struct Submission {
     pub(crate) wait_semaphores: Vec<Arc<Semaphore>>,
@@ -46,6 +46,7 @@ impl Submission {
                         p_wait_semaphores: wait.as_ptr(),
                         signal_semaphore_count: signal.len() as u32,
                         p_signal_semaphores: signal.as_ptr(),
+                        p_wait_dst_stage_mask: std::ptr::null(),
                         ..Default::default()
                     }
                 }

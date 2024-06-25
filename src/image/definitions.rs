@@ -75,6 +75,59 @@ impl ImageAspectFlags {
     pub const STENCIL: Self = Self(0b100);
     pub const METADATA: Self = Self(0b1000);
 }
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[repr(transparent)]
+#[doc = "<https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkImageTiling.html>"]
+pub struct ImageTiling(pub(crate) i32);
+impl ImageTiling {
+    #[inline]
+    pub const fn from_raw(x: i32) -> Self {
+        Self(x)
+    }
+    #[inline]
+    pub const fn as_raw(self) -> i32 {
+        self.0
+    }
+}
+impl ImageTiling {
+    pub const OPTIMAL: Self = Self(0);
+    pub const LINEAR: Self = Self(1);
+    pub const DRM_FORMAT_MODIFIER_EXT: Self = Self(1_000_158_000);
+}
+
+#[repr(transparent)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[doc = "<https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkFormatFeatureFlagBits.html>"]
+pub struct FormatFeatureFlags(pub(crate) u32);
+vk_bitflags_wrapped!(FormatFeatureFlags, u32);
+impl FormatFeatureFlags {
+    #[doc = "Format can be used for sampled images (SAMPLED_IMAGE and COMBINED_IMAGE_SAMPLER descriptor types)"]
+    pub const SAMPLED_IMAGE: Self = Self(0b1);
+    #[doc = "Format can be used for storage images (STORAGE_IMAGE descriptor type)"]
+    pub const STORAGE_IMAGE: Self = Self(0b10);
+    #[doc = "Format supports atomic operations in case it is used for storage images"]
+    pub const STORAGE_IMAGE_ATOMIC: Self = Self(0b100);
+    #[doc = "Format can be used for uniform texel buffers (TBOs)"]
+    pub const UNIFORM_TEXEL_BUFFER: Self = Self(0b1000);
+    #[doc = "Format can be used for storage texel buffers (IBOs)"]
+    pub const STORAGE_TEXEL_BUFFER: Self = Self(0b1_0000);
+    #[doc = "Format supports atomic operations in case it is used for storage texel buffers"]
+    pub const STORAGE_TEXEL_BUFFER_ATOMIC: Self = Self(0b10_0000);
+    #[doc = "Format can be used for vertex buffers (VBOs)"]
+    pub const VERTEX_BUFFER: Self = Self(0b100_0000);
+    #[doc = "Format can be used for color attachment images"]
+    pub const COLOR_ATTACHMENT: Self = Self(0b1000_0000);
+    #[doc = "Format supports blending in case it is used for color attachment images"]
+    pub const COLOR_ATTACHMENT_BLEND: Self = Self(0b1_0000_0000);
+    #[doc = "Format can be used for depth/stencil attachment images"]
+    pub const DEPTH_STENCIL_ATTACHMENT: Self = Self(0b10_0000_0000);
+    #[doc = "Format can be used as the source image of blits with vkCmdBlitImage"]
+    pub const BLIT_SRC: Self = Self(0b100_0000_0000);
+    #[doc = "Format can be used as the destination image of blits with vkCmdBlitImage"]
+    pub const BLIT_DST: Self = Self(0b1000_0000_0000);
+    #[doc = "Format can be filtered with VK_FILTER_LINEAR when being sampled"]
+    pub const SAMPLED_IMAGE_FILTER_LINEAR: Self = Self(0b1_0000_0000_0000);
+}
 #[repr(C)]
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[derive(Copy, Clone, Default)]

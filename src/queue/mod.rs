@@ -11,7 +11,7 @@ use crate::{commands::{CommandBufferLevel, CommandPool, CommandPoolAllocation}, 
 pub struct DeviceQueueCreateFlags(pub(crate) u32);
 vk_bitflags_wrapped!(DeviceQueueCreateFlags, u32);
 #[repr(transparent)]
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[doc = "<https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkQueueFlagBits.html>"]
 pub struct QueueFlags(pub(crate) u32);
 vk_bitflags_wrapped!(QueueFlags, u32);
@@ -114,17 +114,26 @@ impl Queue {
         unsafe { self.device.device.begin_command_buffer(cmd.get_command_buffer(), &begin_info).unwrap() };
         Ok(cmd)
     }
-    pub fn end_single_time_commands(&self, pool: Arc<CommandPool>, command_buffer: vk::CommandBuffer) {
-        unsafe { self.device.device.end_command_buffer(command_buffer).unwrap() };
+    pub fn end_single_time_commands(&self, pool: Arc<CommandPool>, command_buffer: &CommandPoolAllocation) {
+        unsafe { self.device.device.end_command_buffer(command_buffer.get_command_buffer()).unwrap() };
         let info = vk::SubmitInfo {
             command_buffer_count: 1,
-            p_command_buffers: &command_buffer,
+            p_command_buffers: &command_buffer.get_command_buffer(),
             ..Default::default()
         };
         unsafe { 
             self.device.device.queue_submit(self.handle, &[info], vk::Fence::null()).unwrap();
             self.device.device.queue_wait_idle(self.handle).unwrap();
-            self.device.device.free_command_buffers(pool.command_pool, &[command_buffer]);
+            self.device.device.free_command_buffers(pool.command_pool, &[command_buffer.get_command_buffer()]);
+        }
+    }
+    pub fn submit_raw(&self, submits: &[vk::SubmitInfo], fence: &Fence) -> Result<(), VulkanError> {
+        unsafe { 
+            self.device.device.queue_submit(
+                self.handle,
+                &submits,
+                fence.get()
+            ).map_err(VulkanError::from)
         }
     }
     pub fn submit(&self, submit: &[&Submission]) -> Result<SubmissionCache, VulkanError> {
@@ -153,6 +162,15 @@ impl Queue {
             ).map_err(VulkanError::from)?;
         };
         Ok(())
+    }
+    pub fn submit_cached_external_fence(&self, cache: &SubmissionCache, fence: &Fence) -> Result<(), VulkanError> {
+        unsafe {
+            self.device.device.queue_submit(
+                self.handle,
+                &cache.submits,
+                fence.get()
+            ).map_err(VulkanError::from)
+        }
     }
     pub fn submit_cached_with_fence(&self, cache: &SubmissionCache) -> Result<Arc<Fence>, VulkanError> {
         let fence = Arc::new(Fence::new(self.device.clone(), false));

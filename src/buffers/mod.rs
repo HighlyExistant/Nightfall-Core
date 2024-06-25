@@ -67,6 +67,7 @@ pub struct Buffer {
     pub(crate) usage: BufferUsageFlags,
     pub(crate) properties: MemoryPropertyFlags,
     pub(crate) size: usize,
+    pub(crate) alignment: usize,
     pub(crate) memory: Arc<DeviceMemory>,
     pub(crate) device_ptr: Option<DevicePointer>,
 }
@@ -123,12 +124,17 @@ impl Buffer {
             usage: info.usage,
             properties: info.properties,
             size: info.size,
+            alignment: requirements.alignment as usize,
             memory,
             device_ptr: device_ptr
         })
     }
     pub fn memory_requirements(&self) -> vk::MemoryRequirements {
         self.device.get_buffer_memory_requirements(self.handle)
+    }
+    #[inline(always)]
+    pub fn usage(&self) -> BufferUsageFlags {
+        self.usage
     }
     #[inline(always)]
     pub fn get_address(&self) -> Option<DevicePointer> {
@@ -148,11 +154,19 @@ impl Buffer {
         self.size
     }
     #[inline(always)]
+    pub fn alignment(&self) -> usize {
+        self.alignment
+    }
+    #[inline(always)]
     pub fn handle(&self) -> vk::Buffer {
         self.handle
     }
     pub fn is_mappable(&self) -> bool {
         self.properties.contains(MemoryPropertyFlags::HOST_VISIBLE)
+    }
+    #[inline(always)]
+    pub fn properties(&self) -> MemoryPropertyFlags {
+        self.properties
     }
     pub unsafe fn raw_map<T>(&self, size: usize, offset: usize) -> Result<*mut T, VulkanError>  {
          self.device.device.map_memory(self.memory.memory(), offset as u64, size as u64, vk::MemoryMapFlags::empty()).map_err(VulkanError::from).map(|ok|{ ok as *mut T })
@@ -164,7 +178,7 @@ impl Buffer {
         self.device_ptr.is_some()
     }
     pub fn map_memory<T>(self: Arc<Self>, range: Range<usize>) -> Result<MappedMemory<T>, VulkanError> {
-        MappedMemory::new(self.device.clone(), self.clone(), range)
+        MappedMemory::new(self.clone(), range)
     }
     pub fn offset(&self, offset: usize) -> BufferOffset {
         unsafe { BufferOffset::from_raw(self.handle, offset as u64) }

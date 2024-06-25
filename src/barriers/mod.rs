@@ -1,6 +1,8 @@
+use std::sync::Arc;
+
 use ash::vk;
 
-use crate::{image::{ImageLayout, RawImage, ImageSubresourceRange}, memory::AccessFlags};
+use crate::{commands::CommandPoolAllocation, device::LogicalDevice, image::{ImageLayout, ImageSubresourceRange, PipelineStageFlags, RawImage}, memory::{AccessFlags, DependencyFlags}};
 
 #[repr(C)]
 #[cfg_attr(feature = "debug", derive(Debug))]
@@ -57,6 +59,11 @@ pub struct BufferMemoryBarrier {
     pub offset: u64,
     pub size: u64,
 }
+impl BufferMemoryBarrier {
+    pub fn wait(&self, device: Arc<LogicalDevice>, command_buffer: &CommandPoolAllocation, src: PipelineStageFlags, dst: PipelineStageFlags) {
+        command_buffer.pipeline_barrier(src.into(), dst.into(), DependencyFlags::empty(), &[], &[*self], &[]);
+    }
+}
 impl From<&BufferMemoryBarrier> for vk::BufferMemoryBarrier {
     fn from(value: &BufferMemoryBarrier) -> Self {
         Self {
@@ -69,5 +76,28 @@ impl From<&BufferMemoryBarrier> for vk::BufferMemoryBarrier {
             size: value.size,
             ..Default::default()
         }
+    }
+}
+pub struct Barriers {
+    src: PipelineStageFlags, 
+    dst: PipelineStageFlags,
+    memory: Vec<MemoryBarrier>,
+    image: Vec<ImageMemoryBarrier>,
+    buffer: Vec<BufferMemoryBarrier>,
+}
+
+impl Barriers {
+    pub fn new(src: PipelineStageFlags, dst: PipelineStageFlags, memory: Vec<MemoryBarrier>, image: Vec<ImageMemoryBarrier>, buffer: Vec<BufferMemoryBarrier>) -> Self {
+        Self { src, dst, memory, image, buffer }
+    }
+    pub fn merge(&mut self, other: &mut Self) {
+        self.memory.append(&mut other.memory);
+        self.image.append(&mut other.image);
+        self.buffer.append(&mut other.buffer);
+        self.src |= other.src;
+        self.dst |= other.dst;
+    }
+    pub fn wait(&self, device: Arc<LogicalDevice>, command_buffer: &CommandPoolAllocation) {
+        command_buffer.pipeline_barrier(self.src.into(), self.dst.into(), DependencyFlags::empty(), &self.memory, &self.buffer, &self.image);
     }
 }

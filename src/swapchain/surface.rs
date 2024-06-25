@@ -21,6 +21,9 @@ impl Surface {
             Self { handle, instance: instance.clone() }
         )
     }
+    pub unsafe fn from_raw(handle: vk::SurfaceKHR, instance: Arc<Instance>) -> Self {
+        Self { handle, instance }
+    }
     pub fn handle(&self) -> vk::SurfaceKHR {
         self.handle
     }

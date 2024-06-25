@@ -17,7 +17,7 @@ impl<T> MappedMemory<T> {
     /// represents a pointer offset of 0..(3 * size_of::<T>() bytes).
     ///
     /// [`MappedMemory`] is made to be used with buffers, if you want to work with [`DeviceMemory`] look into [`MappingState`].
-    pub fn new(device: Arc<LogicalDevice>, buffer: Arc<Buffer>, range: Range<usize>) -> Result<Self, VulkanError> {
+    pub fn new(buffer: Arc<Buffer>, range: Range<usize>) -> Result<Self, VulkanError> {
         // check if memory has already been mapped on this buffers memory
         if let Some(mapped) = unsafe { buffer.memory.mapping_state.as_ptr().as_mut().unwrap() } {
             // If the memory has already been mapped then try to see if its within range
@@ -36,7 +36,7 @@ impl<T> MappedMemory<T> {
         } else {
             // If it's not mapped then proceed like normal
             unsafe {
-                let ptr = device.device.map_memory(buffer.memory.memory(), 
+                let ptr = buffer.device.device.map_memory(buffer.memory.memory(), 
                 range.start as u64, 
                 range.end as u64, 
                 vk::MemoryMapFlags::empty())

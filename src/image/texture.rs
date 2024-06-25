@@ -4,11 +4,11 @@ use ash::vk::{self, Extent3D, QUEUE_FAMILY_IGNORED, ImageSubresourceRange, Compo
 
 use crate::{buffers::{Buffer, BufferCreateInfo, BufferUsageFlags, MemoryPropertyFlags}, commands::CommandPool, device::LogicalDevice, error::VulkanError, queue::Queue, swapchain::Format};
 
-use super::{ImageUsageFlags, PipelineStageFlags, RawImage, Sampler, SamplerBuilder};
+use super::{ImageUsageFlags, ImageView, PipelineStageFlags, RawImage, Sampler, SamplerBuilder};
 
 pub struct TextureImage {
     image: Arc<RawImage>,
-    view: vk::ImageView,
+    view: ImageView,
     sampler: Arc<Sampler>,
 }
 
@@ -27,7 +27,7 @@ impl TextureImage {
         Ok(Self { image, view, sampler })
     }
     pub fn from_image(raw_image: Arc<RawImage>) -> Result<Self, VulkanError> {
-        let sampler = Self::create_sampler(raw_image.queue.device());
+        let sampler = Self::create_sampler(raw_image.device());
         let view = raw_image.create_view(vk::ImageSubresourceRange {
             aspect_mask: vk::ImageAspectFlags::COLOR,
             base_mip_level: 0,
@@ -143,7 +143,7 @@ impl TextureImage {
             }
         }
     }
-    pub fn raw_create_image(device: Arc<Queue>, width: u32, height: u32, format: vk::Format, usage: vk::ImageUsageFlags) -> Result<Arc<RawImage>, VulkanError> {
+    pub fn raw_create_image(queue: Arc<Queue>, width: u32, height: u32, format: vk::Format, usage: vk::ImageUsageFlags) -> Result<Arc<RawImage>, VulkanError> {
         let create_info = vk::ImageCreateInfo {
             image_type: vk::ImageType::TYPE_2D,
             extent: Extent3D {
@@ -161,7 +161,7 @@ impl TextureImage {
             samples: vk::SampleCountFlags::TYPE_1,
             ..Default::default()
         };
-        RawImage::from_raw_info(device.clone(), &create_info)
+        RawImage::from_raw_info(queue.device(), Some(queue.clone()), &create_info)
     }
     fn copy_buffer_to_image(&self, pool: Arc<CommandPool>, buffer: vk::Buffer, width: u32, height: u32) -> Result<(), VulkanError> {
         let region = vk::BufferImageCopy {
@@ -191,7 +191,7 @@ impl TextureImage {
         vk::DescriptorImageInfo {
             image_layout: layout,
             sampler: self.sampler.sampler,
-            image_view: self.view,
+            image_view: self.view.handle(),
             ..Default::default()
         }
     }
@@ -206,11 +206,5 @@ impl TextureImage {
     #[inline]
     pub fn height(&self) -> usize {
         self.image.height()
-    }
-}
-
-impl Drop for TextureImage {
-    fn drop(&mut self) {
-        unsafe { self.image.queue.device().device.destroy_image_view(self.view, None) };
     }
 }

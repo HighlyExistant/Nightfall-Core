@@ -16,7 +16,10 @@ pub mod descriptors;
 pub mod barriers;
 pub mod entry;
 pub mod error;
-
+pub mod render;
+pub mod vertex;
+mod nfptr;
+pub use nfptr::NfPtr;
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Version {
     pub major: u32,   

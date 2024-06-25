@@ -3,7 +3,7 @@ use std::{mem::MaybeUninit, sync::Arc};
 
 use ash::vk;
 
-use crate::{entry::ENTRY, instance::Instance, queue::QueueFamilyProperties, PNext, Version};
+use crate::{entry::ENTRY, instance::Instance, queue::QueueFamilyProperties, swapchain::Format, PNext, Version};
 
 use super::{DeviceExtensions, DeviceFeatures, ExtensionProperties};
 
@@ -87,6 +87,9 @@ impl PhysicalDevice {
             memory_properties,
             properties
         })
+    }
+    pub fn get_format_properties(&self, format: Format) -> vk::FormatProperties {
+        unsafe { self.instance.instance.get_physical_device_format_properties(self.handle(), vk::Format::from_raw(format.0)) }
     }
     pub fn handle(&self) -> vk::PhysicalDevice {
         self.handle

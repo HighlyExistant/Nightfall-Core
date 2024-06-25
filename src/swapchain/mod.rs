@@ -1,12 +1,13 @@
 use std::{cell::Cell, mem::MaybeUninit, sync::Arc};
 
-use ash::{prelude::VkResult, vk::{self, SurfaceKHR}};
+use ash::{prelude::VkResult, vk::{self, ComponentMapping, ComponentSwizzle, SurfaceKHR}};
 
 mod definitions;
 pub mod surface;
 pub use definitions::*;
 
-use crate::{device::LogicalDevice, error::VulkanError, image::ImageUsageFlags};
+use crate::{device::LogicalDevice, error::VulkanError, image::ImageUsageFlags, sync::{Fence, Semaphore}};
+#[derive(Default, Clone)]
 pub struct SwapchainBuilder {
     pub sharing_queues: Vec<u32>,
     pub flags: SwapchainCreateFlagsKHR,
@@ -55,7 +56,7 @@ impl SwapchainBuilder {
             image_usage: ImageUsageFlags::empty(),
             pre_transform: SurfaceTransformFlagsKHR::empty(),
             composite_alpha: CompositeAlphaFlagsKHR::OPAQUE,
-            present_mode: PresentModeKHR::from_raw(0),
+            present_mode: PresentModeKHR::FIFO,
             clipped: false,
             old: None
         }
@@ -125,6 +126,13 @@ impl SwapchainBuilder {
                     base_array_layer: 0,
                     layer_count: 1
                 },
+                components: ComponentMapping {
+                    r: ComponentSwizzle::IDENTITY,
+                    g: ComponentSwizzle::IDENTITY,
+                    b: ComponentSwizzle::IDENTITY,
+                    a: ComponentSwizzle::IDENTITY,
+                },
+                
                 ..Default::default()
             };
 
@@ -234,7 +242,10 @@ pub struct Swapchain {
 }
 
 impl Swapchain {
-    pub fn next_image(&self, semaphore: vk::Semaphore, fence: vk::Fence) -> Result<bool, VulkanError> { 
+    pub fn builder() -> SwapchainBuilder {
+        SwapchainBuilder::new()
+    }
+    pub fn next_image(&self, semaphore: Option<&Semaphore>, fence: Option<Fence>) -> Result<bool, VulkanError> { 
         // let (idx, suboptimal) = unsafe { 
         let mut idx = 0;
         unsafe {
@@ -242,8 +253,8 @@ impl Swapchain {
                 self.device.handle(),
                 self.handle, 
                 std::u64::MAX, 
-                semaphore, 
-                fence,
+                semaphore.map(|v| v.get() ).unwrap_or_default(), 
+                fence.map(|v| v.get() ).unwrap_or_default(),
                 &mut idx
             );
             self.image_idx.set(idx);
@@ -311,12 +322,21 @@ impl Swapchain {
     pub fn color_space(&self) -> ColorSpaceKHR {
         self.color_space
     }
+    pub fn image_views(&self) -> &[vk::ImageView] {
+        &self.views
+    }
     #[inline]
     pub fn extent(&self) -> [u32; 2] { self.extent }
+    #[inline]
+    pub fn width(&self) -> u32 { self.extent[0] }
+    #[inline]
+    pub fn height(&self) -> u32 { self.extent[1] }
     #[inline]
     pub fn swapchain(&self) -> vk::SwapchainKHR { self.handle }
     #[inline]
     pub fn image_count(&self) -> usize { self.images.len() }
+    #[inline]
+    pub fn image_index(&self) -> usize { self.image_idx.get() as usize }
 }
 
 impl Drop for Swapchain {

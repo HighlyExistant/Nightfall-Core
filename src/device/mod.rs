@@ -4,13 +4,13 @@ mod functions;
 mod physical_device;
 use std::{sync::Arc, time::Duration};
 
-use ash::vk;
+use ash::vk::{self};
 pub use extensions::*;
 pub use features::*;
 pub use functions::*;
 pub use physical_device::*;
 
-use crate::{error::VulkanError, instance::Instance, memory::{DeviceMemory, DevicePointer}, pipeline::shader::ShaderStageFlags, queue::{DeviceQueueCreateFlags, Queue, QueueBuilder}, sync::Semaphore, PNext, Version};
+use crate::{error::VulkanError, image::{FormatFeatureFlags, ImageTiling}, instance::Instance, memory::{DeviceMemory, DevicePointer}, pipeline::shader::ShaderStageFlags, queue::{DeviceQueueCreateFlags, Queue, QueueBuilder}, swapchain::Format, sync::Semaphore, PNext, Version};
 
 #[derive(Clone, Default, Debug)]
 pub struct LogicalDeviceBuilder {
@@ -181,6 +181,7 @@ impl LogicalDeviceBuilder {
         let queues = {
             let device = device.clone();
             self.queue_builders.into_iter().map(move |value|{ unsafe { 
+                println!("{:#?}", qfp[value.queue_family_index as usize].queue_flags);
                 Queue::new(device.clone(), value.flags, qfp[value.queue_family_index as usize].queue_flags, value.queue_family_index, value.idx) 
             }})
         };
@@ -263,8 +264,22 @@ impl LogicalDevice {
         unsafe { self.device.bind_image_memory(image, memory.handle, 0).unwrap() };
         Ok((image, memory))
     }
-    pub fn wait(&self) {
-        unsafe { self.device.device_wait_idle().unwrap() };
+    pub fn wait(&self) -> Result<(), VulkanError> {
+        unsafe { self.device.device_wait_idle().map_err(VulkanError::from) }
+    }
+    pub fn find_supported_format<'a>(&self, candidates: &'a [Format], tiling: ImageTiling, features: FormatFeatureFlags) -> Option<Format> {
+        let found = candidates.iter().find(move |candidate|{
+            let candidate = (*candidate).clone();
+            let props = self.physical_device.get_format_properties(candidate);
+            if tiling == ImageTiling::LINEAR && props.linear_tiling_features.contains(vk::FormatFeatureFlags::from_raw(features.0)) {
+                true
+            } else if tiling == ImageTiling::OPTIMAL && props.optimal_tiling_features.contains(vk::FormatFeatureFlags::from_raw(features.0)) {
+                true
+            } else {
+                false
+            }
+        });
+        found.cloned()
     }
 }
 

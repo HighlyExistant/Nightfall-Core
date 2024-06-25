@@ -50,30 +50,30 @@ impl From<&ClearValues> for vk::ClearValue {
     }
 }
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 #[doc = "<https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkRenderPassBeginInfo.html>"]
-pub struct RenderPassBeginInfo<'a> {
-    pub p_next: PNext,
+pub struct RenderPassBeginInfo {
+    pub p_next: Option<PNext>,
     pub render_pass: RenderPass,
     pub framebuffer: Framebuffer,
     pub offset: [i32; 2],
     pub extent: [u32; 2],
     pub clear_value_count: u32,
-    pub p_clear_values: &'a ClearValues,
+    pub p_clear_values: Vec<ClearValues>,
 }
-impl<'a> From<RenderPassBeginInfo<'a>> for vk::RenderPassBeginInfo {
-    fn from(value: RenderPassBeginInfo<'a>) -> Self {
-        let clear_value: ClearValue = value.p_clear_values.into();
+impl From<RenderPassBeginInfo> for vk::RenderPassBeginInfo {
+    fn from(value: RenderPassBeginInfo) -> Self {
+        let clear_values = value.p_clear_values.as_ptr();
         vk::RenderPassBeginInfo {
             framebuffer: value.framebuffer,
             clear_value_count: value.clear_value_count,
-            p_clear_values: &clear_value,
+            p_clear_values: clear_values.cast(),
             render_area: Rect2D {
                 offset: vk::Offset2D { x: value.offset[0], y: value.offset[1] },
                 extent: vk::Extent2D { width: value.extent[0], height: value.extent[1] },
             },
             render_pass: value.render_pass,
-            p_next: value.p_next.use_p_next(),
+            p_next: value.p_next.map(|v|v.use_p_next()).unwrap_or(std::ptr::null_mut()),
             ..Default::default()
         }
     }

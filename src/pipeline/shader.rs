@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc, sync::Arc};
+use std::{cell::RefCell, fmt::Debug, rc::Rc, sync::Arc};
 
 use ash::{vk, vk_bitflags_wrapped};
 
@@ -101,6 +101,13 @@ impl Shader {
     }
     pub fn stage(&self) -> &vk::PipelineShaderStageCreateInfo {
         &self.stage
+    }
+}
+impl Debug for Shader {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Shader")
+        .field("stage", &self.stage)
+        .finish()
     }
 }
 impl HasShaderStages for Shader {

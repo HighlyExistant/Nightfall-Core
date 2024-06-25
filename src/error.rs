@@ -133,7 +133,11 @@ pub enum NightfallError {
     #[error("No Input was provided for this action")]
     NoInputWasGiven,
 }
-
+impl From<ash::vk::Result> for NightfallError {
+    fn from(value: ash::vk::Result) -> Self {
+        NightfallError::VulkanError(VulkanError::from(value))
+    }
+}
 impl From<VulkanError> for NightfallError {
     fn from(value: VulkanError) -> Self {
         NightfallError::VulkanError(value)

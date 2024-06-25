@@ -121,6 +121,12 @@ impl CommandPoolAllocation {
     pub fn push_constants<P>(&self, layout: vk::PipelineLayout, stage_flags: ShaderStageFlags, offset: u32, constant: &P) {
         self.device.push_constants(self.command_buffer, layout, stage_flags, offset, constant)
     }
+    pub fn set_viewport(&self, first_viewport: u32, viewports: &[vk::Viewport]) {
+        unsafe { self.device.device.cmd_set_viewport(self.command_buffer, first_viewport, viewports) }
+    }
+    pub fn set_scissor(&self, first_scissor: u32, scissors: &[vk::Rect2D]) {
+        unsafe { self.device.device.cmd_set_scissor(self.command_buffer, first_scissor, scissors) }
+    }
     pub fn copy_buffer(&self, src: vk::Buffer, dst: vk::Buffer, regions: &[BufferCopy]) {
         unsafe { 
             self.device.device.cmd_copy_buffer(
@@ -160,8 +166,8 @@ impl CommandPoolAllocation {
     // vkCmdCopyImageToBuffer, 
     // vkCmdCopyImageToBuffer2, 
     // vkCmdCopyImageToBuffer2KHR, 
-    pub fn begin_render_pass(&self, info: RenderPassBeginInfo, subpass_contents: SubpassContents) -> Result<(), VulkanError> {
-        let begin_info: vk::RenderPassBeginInfo = info.into();
+    pub fn begin_render_pass(&self, info: vk::RenderPassBeginInfo, subpass_contents: SubpassContents) -> Result<(), VulkanError> {
+        // let begin_info: vk::RenderPassBeginInfo = info.into();
         if subpass_contents == SubpassContents::INLINE_AND_SECONDARY_COMMAND_BUFFERS && !self.device.enabled_extensions.ext_nested_command_buffer {
             return Err(VulkanError::ExtensionNotPresent);
         }
@@ -169,12 +175,15 @@ impl CommandPoolAllocation {
         unsafe {
             (self.device.fns.v1_0.cmd_begin_render_pass)(
                 self.get_command_buffer(),
-                &begin_info,
+                &info,
                 contents
             );
         }
         Ok(())
-    } 
+    }
+    pub fn end_render_pass(&self) {
+        unsafe { self.device.device.cmd_end_render_pass(self.command_buffer) };
+    }
     pub fn pipeline_barrier(&self, 
         src_stage_mask: PipelineStageFlags, 
         dst_stage_mask: PipelineStageFlags, 
@@ -196,6 +205,19 @@ impl CommandPoolAllocation {
                 &image_memory_barriers
             )
         }
+    }
+    pub fn bind_vertex_buffers(&self, first_binding: u32, buffers: &[vk::Buffer], offsets: &[vk::DeviceSize]) {
+        unsafe { self.device.device.cmd_bind_vertex_buffers(self.command_buffer, first_binding, buffers, offsets) }
+    }
+    pub fn bind_index_buffers(&self, buffer: vk::Buffer, offset: vk::DeviceSize, index_type: vk::IndexType) {
+        unsafe { self.device.device.cmd_bind_index_buffer(self.command_buffer, buffer, offset, index_type); }
+    }
+    pub fn draw(&self, vertex_count: u32, instance_count: u32, first_vertex: u32, first_instance: u32) {
+        unsafe { self.device.device.cmd_draw(self.command_buffer, vertex_count, instance_count, first_vertex, first_instance) };
+    }
+    pub fn draw_indexed(&self, index_count: u32, instance_count: u32, first_index: u32, vertex_offset: i32, first_instance: u32) {
+        unsafe { self.device.device.cmd_draw_indexed(self.command_buffer, index_count, instance_count, first_index, vertex_offset, first_instance) };
+        
     }
 }
 pub struct CommandPool {

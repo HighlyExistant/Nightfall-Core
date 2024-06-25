@@ -1,3 +1,4 @@
+workspace = { members = ["nightfall_core_macros"] }
 [package]
 name = "nightfall_core"
 version = "0.1.0"
@@ -6,6 +7,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+nightfall_core_macros = { path = "nightfall_core_macros" }
 ash = { version = "0.37.2", features = ["linked", "debug"] }
 bytemuck = "1.14.3"
 lazy_static = "1.4.0"
