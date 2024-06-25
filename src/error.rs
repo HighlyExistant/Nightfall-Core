@@ -109,7 +109,11 @@ impl From<ash::vk::Result> for VulkanError {
         }
     }
 }
-
+#[derive(Error, Debug, PartialEq, PartialOrd)]
+pub enum PointerError {
+    #[error("Alignment error while casting pointer.")]
+    CastAlignmentError
+}
 /// NightfallError is a more robust error handler for  
 /// Nightfall specific operations, not only vulkan
 #[derive(Error, Debug, PartialEq, PartialOrd)]
@@ -132,6 +136,8 @@ pub enum NightfallError {
     NotEnoughDescriptorSets(usize, usize),
     #[error("No Input was provided for this action")]
     NoInputWasGiven,
+    #[error("{0}")]
+    PointerError(PointerError),
 }
 impl From<ash::vk::Result> for NightfallError {
     fn from(value: ash::vk::Result) -> Self {

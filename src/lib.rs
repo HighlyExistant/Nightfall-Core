@@ -19,7 +19,7 @@ pub mod error;
 pub mod render;
 pub mod vertex;
 mod nfptr;
-pub use nfptr::NfPtr;
+pub use nfptr::*;
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Version {
     pub major: u32,   
