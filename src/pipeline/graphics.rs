@@ -158,7 +158,7 @@ impl RasterizationMode {
         match self {
             RasterizationMode::Fill { topology, cull, front } => { vk::PolygonMode::FILL }
             RasterizationMode::Line { topology, line_width } => { vk::PolygonMode::LINE }
-            &RasterizationMode::Point {  } => { vk::PolygonMode::POINT }
+            RasterizationMode::Point {  } => { vk::PolygonMode::POINT }
             RasterizationMode::Rect { topology, cull, front } => { vk::PolygonMode::FILL_RECTANGLE_NV }
         }
     }

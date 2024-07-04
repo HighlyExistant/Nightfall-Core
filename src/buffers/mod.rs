@@ -1,12 +1,12 @@
 use std::{ops::Range, os::raw::c_void, sync::Arc};
 
-use ash::{vk, vk_bitflags_wrapped};
+use ash::{vk::{self, Handle}, vk_bitflags_wrapped};
 mod map;
 pub use map::*;
 
-use crate::{device::LogicalDevice, error::VulkanError, memory::{DeviceMemory, DevicePointer}};
+use crate::{device::LogicalDevice, error::VulkanError, memory::{DeviceMemory, DevicePointer}, AsNfptr, NfPtr};
 #[repr(transparent)]
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[doc = "<https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkBufferUsageFlagBits.html>"]
 pub struct BufferUsageFlags(pub(crate) u32);
 vk_bitflags_wrapped!(BufferUsageFlags, u32);
@@ -43,6 +43,8 @@ impl MemoryPropertyFlags {
     pub const HOST_VISIBLE: Self = Self(0b10);
     #[doc = "Memory will have i/o coherency. If not set, application may need to use vkFlushMappedMemoryRanges and vkInvalidateMappedMemoryRanges to flush/invalidate host cache"]
     pub const HOST_COHERENT: Self = Self(0b100);
+    #[doc = "Memory is mappable by host & Memory will have i/o coherency. If not set, application may need to use vkFlushMappedMemoryRanges and vkInvalidateMappedMemoryRanges to flush/invalidate host cache"]
+    pub const HOST_VISIBLE_COHERENT: Self = Self(0b110);
     #[doc = "Memory will be cached by the host"]
     pub const HOST_CACHED: Self = Self(0b1000);
     #[doc = "Memory may be allocated by the driver when it is required"]
@@ -199,5 +201,11 @@ pub struct BufferOffset {
 impl BufferOffset {
     pub unsafe fn from_raw(handle: vk::Buffer, offset: u64) -> Self {
         Self { handle, offset }
+    }
+}
+
+unsafe impl AsNfptr for Buffer {
+    unsafe fn as_nfptr(&self) -> NfPtr {
+        NfPtr::new(self.buffer().as_raw(), 0, self.device_ptr, self.size)
     }
 }

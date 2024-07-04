@@ -20,10 +20,6 @@ impl RenderPass {
             flags,
             ..Default::default()
         };
-        println!("{:#?}", info);
-        println!("{:#?}", attachments);
-        println!("{:#?}", dependencies);
-        println!("{:#?}", subpasses);
         let renderpass = unsafe {
             device.device.create_render_pass(&info, None).map_err(NightfallError::from)?
         };

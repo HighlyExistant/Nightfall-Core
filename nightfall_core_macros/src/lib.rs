@@ -1,11 +1,12 @@
+#![allow(unused)]
 use proc_macro::TokenStream;
-use quote::{ToTokens, TokenStreamExt};
-use syn::{parse_macro_input, spanned::Spanned, Attribute, Data, DeriveInput, Fields, Meta, Path};
+use quote::TokenStreamExt;
+use syn::{Attribute, Data, DeriveInput, Fields, Meta};
 fn grab_format(attr: &Attribute) -> proc_macro2::TokenStream {
     let &Attribute { 
-        pound_token, 
-        style, 
-        bracket_token, 
+        pound_token: _, 
+        style: _, 
+        bracket_token: _, 
         meta 
     } = &attr;
     match meta {
@@ -78,8 +79,6 @@ pub fn derive(input: TokenStream) -> TokenStream {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn it_works() {
     }

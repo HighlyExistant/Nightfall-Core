@@ -2,7 +2,7 @@ mod extensions;
 mod features;
 mod functions;
 mod physical_device;
-use std::{sync::Arc, time::Duration};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use ash::vk::{self};
 pub use extensions::*;
@@ -16,14 +16,14 @@ use crate::{error::VulkanError, image::{FormatFeatureFlags, ImageTiling}, instan
 pub struct LogicalDeviceBuilder {
     pub enabled_extensions: DeviceExtensions,
     pub enabled_features: DeviceFeatures,
-    pub queue_builders: Vec<QueueBuilder>,
+    pub queue_builders: HashMap<u32, QueueBuilder>,
 }
 impl LogicalDeviceBuilder {
     pub fn new() -> Self {
         Self {
             enabled_extensions: DeviceExtensions::default(),
             enabled_features: DeviceFeatures::default(),
-            queue_builders: vec![],
+            queue_builders: HashMap::new(),
         }
     }
     pub fn enable_swapchain_extensions(mut self) -> Self {
@@ -41,6 +41,10 @@ impl LogicalDeviceBuilder {
     }
     pub fn enable_float64(mut self) -> Self {
         self.enabled_features.shader_float64 = true;
+        self
+    }
+    pub fn enable_int64(mut self) -> Self {
+        self.enabled_features.shader_int64 = true;
         self
     }
     pub fn subgroup_ballot(mut self) -> Self {
@@ -93,6 +97,10 @@ impl LogicalDeviceBuilder {
         self.enabled_extensions.khr_bind_memory2 = true;
         self
     }
+    pub fn fill_mode_non_solid(mut self) -> Self {
+        self.enabled_features.fill_mode_non_solid = true;
+        self
+    }
     pub fn maintenance3(mut self) -> Self {
         self.enabled_extensions.khr_maintenance3 = true;
         self
@@ -102,13 +110,19 @@ impl LogicalDeviceBuilder {
         self
     }
     pub fn add_queue(mut self, flags: DeviceQueueCreateFlags ,queue_family_index: u32, queue_count: u32, idx: u32,p_queue_priorities: *const f32) -> Self {
-        self.queue_builders.push(QueueBuilder {
-            flags,
-            idx,
-            p_queue_priorities,
-            queue_count,
-            queue_family_index
-        });
+        if let Some(builder) = self.queue_builders.get_mut(&queue_family_index) {
+            builder.queue_count += queue_count;
+            builder.p_queue_priorities = p_queue_priorities;
+        } else {
+            self.queue_builders.insert(queue_family_index, QueueBuilder {
+                flags,
+                idx,
+                p_queue_priorities,
+                queue_count,
+                queue_family_index
+            });
+        }
+        
         self
     }
     pub fn build(self, physical_device: Arc<PhysicalDevice>) -> Result<(Arc<LogicalDevice>, impl ExactSizeIterator<Item = Arc<Queue>>), VulkanError> {
@@ -140,11 +154,11 @@ impl LogicalDeviceBuilder {
         if let Some(vk13) = &mut vk13 {
             p_next.push_back(vk13)
         }
-        let queue_create_info = self.queue_builders.iter().map(|val|{
+        let queue_create_info = self.queue_builders.iter().map(|(queue_idx, val)|{
             vk::DeviceQueueCreateInfo {
                 queue_family_index: val.queue_family_index,
                 flags: vk::DeviceQueueCreateFlags::from_raw(val.flags.0),
-                p_queue_priorities: &1.0,
+                p_queue_priorities: val.p_queue_priorities,
                 queue_count: val.queue_count,
                 ..Default::default()
             }
@@ -180,7 +194,7 @@ impl LogicalDeviceBuilder {
         });
         let queues = {
             let device = device.clone();
-            self.queue_builders.into_iter().map(move |value|{ unsafe { 
+            self.queue_builders.into_iter().map(move |(queue_idx, value)|{ unsafe { 
                 println!("{:#?}", qfp[value.queue_family_index as usize].queue_flags);
                 Queue::new(device.clone(), value.flags, qfp[value.queue_family_index as usize].queue_flags, value.queue_family_index, value.idx) 
             }})

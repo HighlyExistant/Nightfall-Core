@@ -30,7 +30,7 @@ impl CommandBufferResetFlags {
     #[doc = "Release resources owned by the buffer"]
     pub const RELEASE_RESOURCES: Self = Self(0b1);
 }
-use crate::{barriers::{BufferMemoryBarrier, ImageMemoryBarrier, MemoryBarrier}, device::LogicalDevice, error::VulkanError, image::{ImageLayout, PipelineStageFlags}, memory::DependencyFlags, pipeline::shader::ShaderStageFlags};
+use crate::{barriers::{BufferMemoryBarrier, ImageMemoryBarrier, MemoryBarrier}, device::LogicalDevice, error::VulkanError, image::{ImageLayout, PipelineStageFlags}, memory::DependencyFlags, pipeline::shader::ShaderStageFlags, NfPtr};
 
 #[repr(transparent)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -205,6 +205,18 @@ impl CommandPoolAllocation {
                 &image_memory_barriers
             )
         }
+    }
+    pub unsafe fn bind_vertex_nfptrs(&self, first_binding: u32, nfptr: &[NfPtr]) {
+        let mut buffers = vec![];
+        let mut offsets = vec![];
+        for ptr in nfptr {
+            buffers.push(ptr.buffer());
+            offsets.push(ptr.offset() as u64);
+        }
+        self.bind_vertex_buffers(0, &buffers, &offsets);
+    }
+    pub unsafe fn bind_index_nfptr(&self, first_binding: u32, nfptr: NfPtr, index_type: vk::IndexType) {
+        self.bind_index_buffers(nfptr.buffer(), nfptr.offset() as u64, index_type)
     }
     pub fn bind_vertex_buffers(&self, first_binding: u32, buffers: &[vk::Buffer], offsets: &[vk::DeviceSize]) {
         unsafe { self.device.device.cmd_bind_vertex_buffers(self.command_buffer, first_binding, buffers, offsets) }

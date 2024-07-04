@@ -245,6 +245,9 @@ impl Swapchain {
     pub fn builder() -> SwapchainBuilder {
         SwapchainBuilder::new()
     }
+    pub fn device(&self) -> Arc<LogicalDevice> {
+        self.device.clone()
+    }
     pub fn next_image(&self, semaphore: Option<&Semaphore>, fence: Option<Fence>) -> Result<bool, VulkanError> { 
         // let (idx, suboptimal) = unsafe { 
         let mut idx = 0;

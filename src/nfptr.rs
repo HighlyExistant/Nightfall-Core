@@ -4,7 +4,7 @@ use ash::vk::{self, Handle};
 
 use crate::{barriers::BufferMemoryBarrier, buffers::BufferOffset, descriptors::DescriptorBufferInfo, error::{NightfallError, PointerError}, memory::{AccessFlags, DevicePointer}};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct NfPtr {
     id: u64,
     offset: usize,
@@ -62,6 +62,16 @@ impl NfPtr {
             Self::new(self.id(), self.offset()+rhs, None, self.size-rhs)
         }
     }
+    pub fn add_checked(self, rhs: usize) -> Option<Self> {
+        if let Some(address) = self.address {
+            Some(Self::new(self.id(), self.offset()+rhs, Some(DevicePointer::from_raw(address.addr() as u64+rhs as u64)), self.size.checked_sub(rhs)?))
+        } else {
+            Some(Self::new(self.id(), self.offset()+rhs, None, self.size.checked_sub(rhs)?))
+        }
+    }
+    pub fn cast<T>(&self) -> std::result::Result<NfPtrType<T>, NightfallError> {
+        NfPtrType::try_from(self)
+    }
 }
 impl PartialEq for NfPtr {
     fn eq(&self, other: &Self) -> bool {
@@ -72,7 +82,7 @@ impl PartialEq for NfPtr {
     }
 }
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct NfPtrType<T>(NfPtr, PhantomData<T>);
 
 impl<T> NfPtrType<T> {
@@ -111,6 +121,14 @@ impl<T> NfPtrType<T> {
             Self(NfPtr::new(self.id(), self.offset()+rhs, None, self.size()-rhs), PhantomData)
         }
     }
+    pub fn add_checked(self, rhs: usize) -> Option<Self> {
+        let rhs = rhs*std::mem::size_of::<T>();
+        if let Some(address) = self.device_address() {
+            Some(Self(NfPtr::new(self.id(), self.offset()+rhs, Some(DevicePointer::from_raw(address.addr() as u64+rhs as u64)), self.size().checked_sub(rhs)?), PhantomData))
+        } else {
+            Some(Self(NfPtr::new(self.id(), self.offset()+rhs, None, self.size().checked_sub(rhs)?), PhantomData))
+        }
+    }
 }
 
 impl<T: Sized> From<NfPtrType<T>> for NfPtr {
@@ -120,7 +138,7 @@ impl<T: Sized> From<NfPtrType<T>> for NfPtr {
 }
 impl<'a, T: Sized> From<&'a NfPtrType<T>> for NfPtr {
     fn from(value: &'a NfPtrType<T>) -> Self {
-        value.0
+        value.0.clone()
     }
 }
 
@@ -135,9 +153,16 @@ impl<'a, T: Sized> TryFrom<&'a NfPtr> for NfPtrType<T> {
     fn try_from(value: &'a NfPtr) -> Result<Self, Self::Error> {
         // check if division by align has a remainder.
         if (std::mem::align_of::<T>()*(value.size()/std::mem::align_of::<T>())) == value.size() {
-            Ok(Self(*value, PhantomData))
+            Ok(Self(value.clone(), PhantomData))
         } else { // if it does have a remainder then that is an alignment issue
             Err(NightfallError::PointerError(PointerError::CastAlignmentError))
         }
     }
+}
+
+pub unsafe trait AsNfptr {
+    unsafe fn as_nfptr(&self) -> NfPtr;
+}
+pub trait AsNfptrType<T> {
+    fn as_nfptr_ty(&self) -> Result<NfPtrType<T>, NightfallError>;
 }

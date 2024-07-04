@@ -1,8 +1,8 @@
-use std::sync::Arc;
+use std::{ops::Deref, sync::Arc};
 
 use ash::vk;
 
-use crate::{commands::CommandPoolAllocation, device::LogicalDevice, image::{ImageLayout, ImageSubresourceRange, PipelineStageFlags, RawImage}, memory::{AccessFlags, DependencyFlags}};
+use crate::{commands::CommandPoolAllocation, device::LogicalDevice, image::{ImageLayout, ImageSubresourceRange, PipelineStageFlags, RawImage}, memory::{AccessFlags, DependencyFlags}, AsNfptr};
 
 #[repr(C)]
 #[cfg_attr(feature = "debug", derive(Debug))]
@@ -79,11 +79,11 @@ impl From<&BufferMemoryBarrier> for vk::BufferMemoryBarrier {
     }
 }
 pub struct Barriers {
-    src: PipelineStageFlags, 
-    dst: PipelineStageFlags,
-    memory: Vec<MemoryBarrier>,
-    image: Vec<ImageMemoryBarrier>,
-    buffer: Vec<BufferMemoryBarrier>,
+    pub src: PipelineStageFlags, 
+    pub dst: PipelineStageFlags,
+    pub memory: Vec<MemoryBarrier>,
+    pub image: Vec<ImageMemoryBarrier>,
+    pub buffer: Vec<BufferMemoryBarrier>,
 }
 
 impl Barriers {
